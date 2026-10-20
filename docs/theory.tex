@@ -1,9 +1,36 @@
-% pdflatex theory.tex
+% latexmk -pdf theory.tex
 \documentclass[11pt]{article}
 
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{pgfplots}
+\pgfplotsset{
+  compat=1.18,
+  blaxis/.style={
+    width=0.84\textwidth,
+    height=6.6cm,
+    scale only axis,
+    xmin=0.2, xmax=0.8,
+    domain=0.2:0.8,
+    samples=201,
+    tick label style={font=\small},
+    label style={font=\small},
+    legend cell align=left,
+    legend style={font=\small},
+  },
+}
+\tikzset{
+  declare function={
+    sn(\t)=(\t-0.2)/0.6;
+    krw(\t)=(sn(\t))^2;
+    kro(\t)=(1-sn(\t))^2;
+    lw(\t)=krw(\t);
+    lo(\t)=0.5*kro(\t);
+    ff(\t)=lw(\t)/(lw(\t)+lo(\t));
+    df(\t)=((2*sn(\t)/0.6)*lo(\t)+lw(\t)*((1-sn(\t))/0.6))/((lw(\t)+lo(\t))^2);
+  },
+}
 \usepackage[hidelinks]{hyperref}
 
 \title{Fractional flow, the Welge shock,\\ and the saturation Jacobian}
@@ -65,7 +92,7 @@ Permeability may still vary with $x$: it changes the pressure drop required to p
 
 \section{The Buckley--Leverett equation}
 
-Water conservation with constant porosity $\phi$ is
+Water conservation with constant porosity $\phi$, the starting point of Buckley and Leverett~\cite{buckley1942}, is
 \begin{equation}
 \label{eq:water-balance}
 \phi\frac{\partial S}{\partial t} + \frac{\partial u_w}{\partial x} = 0.
@@ -106,7 +133,7 @@ s = \frac{S - S_{wc}}{1 - S_{wc} - S_{or}},
 \qquad
 \frac{ds}{dS} = \frac{1}{1 - S_{wc} - S_{or}}.
 \end{equation}
-Corey relative permeabilities with endpoint values $k_{rw}^{0}$ and $k_{ro}^{0}$ are
+Corey relative permeabilities~\cite{corey1954} with endpoint values $k_{rw}^{0}$ and $k_{ro}^{0}$ are
 \begin{equation}
 \label{eq:corey}
 k_{rw} = k_{rw}^{0}\, s^{n_w},
@@ -157,6 +184,69 @@ M = \frac{A_w}{A_o} = \frac{k_{rw}^{0}/\mu_w}{k_{ro}^{0}/\mu_o} = 2.
 \end{equation}
 With these exponents, $f$ leaves $S_{wc}$ with zero slope, steepens, and flattens again at $S_{\max}$.
 That S-shape is what forces a shock.
+Figure~\ref{fig:kr} is the relative-permeability plot for this Corey model, in the role of Buckley and Leverett's Figure~1.
+Figure~\ref{fig:ff} is the matching fractional-flow plot, in the role of their Figure~2, including the viscosity ratio $\mu_o/\mu_w = 2$.
+The curves are the default data~\eqref{eq:defaults}, not a tracing of the measured unconsolidated sand in that paper.
+On Figure~\ref{fig:ff}, $f'$ is drawn on its own scale.
+It is zero at both endpoints, peaks between them, and is already decreasing at the Welge saturation $S_f$ marked on the plot.
+The dotted segment is the chord from $(S_{wc},0)$ that is tangent to $f$ at $S_f$.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  blaxis,
+  xlabel={Water saturation $S$},
+  ylabel={Relative permeability},
+  ymin=0, ymax=1.05,
+  legend pos=south east,
+]
+\addplot[thick] {krw(x)};
+\addlegendentry{$k_{rw}$}
+\addplot[thick, dashed] {kro(x)};
+\addlegendentry{$k_{ro}$}
+\end{axis}
+\end{tikzpicture}
+\caption{Corey relative permeabilities for $n_w = n_o = 2$, $S_{wc} = S_{or} = 0.2$, and unit endpoints.
+This is the same arrangement as Figure~1 of Buckley and Leverett~\cite{buckley1942}.}
+\label{fig:kr}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  blaxis,
+  xlabel={Water saturation $S$},
+  ylabel={Fractional flow $f(S)$},
+  ymin=0, ymax=1.08,
+  legend pos=north west,
+]
+\addplot[thick] {ff(x)};
+\addlegendentry{$f(S)$}
+\addplot[dotted, thick, domain=0.2:0.54641] {2.27671*(x-0.2)};
+\addlegendentry{Welge chord}
+\addlegendimage{thick, dashed}
+\addlegendentry{$f'(S)$, right axis}
+\fill (axis cs:0.54641,0.7887) circle (1.1pt);
+\node[anchor=north west, font=\small, inner sep=1pt] at (axis cs:0.552,0.76) {$S_f$};
+\end{axis}
+\begin{axis}[
+  blaxis,
+  ymin=0, ymax=4,
+  ylabel={$f'(S)$},
+  axis y line*=right,
+  axis x line=none,
+  xtick=\empty,
+]
+\addplot[thick, dashed] {df(x)};
+\end{axis}
+\end{tikzpicture}
+\caption{Fractional flow and $f'(S)$ for the default Corey data and $\mu_o/\mu_w = 2$.
+This is the same arrangement as Figure~2 of Buckley and Leverett~\cite{buckley1942}.
+The chord meets $f$ at $S_f = 0.54641$, where $f'(S_f)$ equals the chord slope.}
+\label{fig:ff}
+\end{figure}
 
 One consequence of the same mobilities is used only by the pressure solution.
 For $n_w = n_o = 2$,
@@ -195,7 +285,7 @@ v(S) = \sigma(S) = \frac{f(S)}{S - S_{wc}}.
 \end{equation}
 This is the slope of the chord from $(S_{wc}, 0)$ to $(S, f(S))$.
 Not every chord is admissible.
-Characteristics must run into the shock, and the chord must lie above the graph of $f$ between $S_{wc}$ and the shock saturation $S_f$ (the Oleinik condition for a convex flux, applied here to the convex hull of an S-shaped flux).
+Characteristics must run into the shock, and the chord must lie above the graph of $f$ between $S_{wc}$ and the shock saturation $S_f$ (the Oleinik condition~\cite{oleinik1959} for a convex flux, applied here to the convex hull of an S-shaped flux).
 For the standard fractional-flow curve those requirements select the chord of \emph{largest} slope.
 Differentiating~\eqref{eq:chord},
 \begin{equation}
@@ -217,7 +307,7 @@ Equivalently,
 f'(S_f) = \frac{f(S_f)}{S_f - S_{wc}} = v_s.
 \end{equation}
 The chord is tangent to $f$ at $S_f$.
-That is Welge's construction.
+That is Welge's construction~\cite{welge1952}, drawn as the dotted segment in Figure~\ref{fig:ff}.
 The shock speed $v_s$ is both the characteristic speed just behind the shock and the Rankine--Hugoniot speed of the jump from $S_f$ down to $S_{wc}$.
 The program finds $S_f$ by a golden-section search for the maximum of $\sigma$, then polishes the root of $g$ by a scalar Newton iteration.
 With the default data,
@@ -337,5 +427,29 @@ The pressure matrix derived in the companion note is tridiagonal and symmetric, 
 
 If a capillary term $-\partial_x\bigl(\varepsilon(S)\partial_x S\bigr)$ were added, each residual would also depend on $S_{i+1}$ and $J$ would be tridiagonal.
 The classical Buckley--Leverett problem has no such term, and the code does not add one.
+
+\begin{thebibliography}{9}
+
+\bibitem{buckley1942}
+S.~E. Buckley and M.~C. Leverett.
+\newblock Mechanism of fluid displacement in sands.
+\newblock \emph{Transactions of the AIME}, 146:107--116, 1942.
+
+\bibitem{corey1954}
+A.~T. Corey.
+\newblock The interrelation between gas and oil relative permeabilities.
+\newblock \emph{Producers Monthly}, 19(1):38--41, 1954.
+
+\bibitem{oleinik1959}
+O.~A. Oleinik.
+\newblock Uniqueness and stability of the generalized solution of the Cauchy problem for a quasi-linear equation.
+\newblock \emph{Uspekhi Matematicheskikh Nauk}, 14(2):165--170, 1959.
+
+\bibitem{welge1952}
+H.~J. Welge.
+\newblock A simplified method for computing oil recovery by gas or water drive.
+\newblock \emph{Transactions of the AIME}, 195:91--98, 1952.
+
+\end{thebibliography}
 
 \end{document}

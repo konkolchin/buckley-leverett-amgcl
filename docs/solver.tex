@@ -5,6 +5,29 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{listings}
+\usepackage{pgfplots}
+\pgfplotsset{
+  compat=1.18,
+  solveraxis/.style={
+    width=0.86\textwidth,
+    scale only axis,
+    tick label style={font=\small},
+    label style={font=\small},
+    legend cell align=left,
+    legend style={font=\small, draw=none},
+  },
+}
+\tikzset{
+  upwind/.style={thick, draw=blue!60!black},
+  welge/.style={thick, dashed, draw=red!70!black},
+  declare function={
+    sn(\t)=(\t-0.2)/0.6;
+    lw(\t)=(sn(\t))^2;
+    lo(\t)=0.5*(1-sn(\t))^2;
+    ff(\t)=lw(\t)/(lw(\t)+lo(\t));
+    hull(\t)=ifthenelse(\t<=0.54641,2.27671*(\t-0.2),ff(\t));
+  },
+}
 \usepackage[hidelinks]{hyperref}
 
 \lstset{
@@ -235,6 +258,33 @@ The pressure AMG solve is written out on its own so that~\eqref{eq:p-exact} can 
 The shock speed stored for the CFL and for the exact profile is $v_s = f(S_f)/(S_f-S_{wc})$.
 The exact saturation at a cell is $S_{wc}$ when $x_i/t \ge v_s$, and otherwise the bisection inverse of $f'(S) = x_i/t$ on $[S_f, S_{\max}]$.
 The numerical shock location reported in the text output is the first cell center where $S$ drops below $\tfrac12(S_f + S_{wc})$.
+Figure~\ref{fig:fflow} plots that fractional flow.
+The hull is the chord from $S_{wc}$ up to the point of tangency, and $f$ itself beyond it.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  solveraxis,
+  height=6.2cm,
+  xlabel={Water saturation $S$},
+  ylabel={Fractional flow},
+  xmin=0.2, xmax=0.8,
+  ymin=0, ymax=1.05,
+  domain=0.2:0.8,
+  samples=201,
+  legend pos=north west,
+]
+\addplot[upwind] {ff(x)};
+\addlegendentry{$f(S)$}
+\addplot[welge] {hull(x)};
+\addlegendentry{Welge convex hull}
+\end{axis}
+\end{tikzpicture}
+\caption{Fractional flow for the default Corey data, with the Welge convex hull.
+The hull is the tangent from $S_{wc}$ up to $S_f = 0.54641$, then $f$ itself.}
+\label{fig:fflow}
+\end{figure}
 
 \section{Checks and a default run}
 
@@ -274,7 +324,50 @@ The $L_\infty$ gap is the smeared shock: a first-order implicit upwind step cann
 The $L_1$ error is the meaningful accuracy measure, and it is a few thousandths of a saturation unit.
 The inlet pressure rises because $\lambda_t(S)$ for these Corey exponents has a minimum between $S_{wc}$ and $S_{\max}$.
 The same rate then requires a larger drawdown.
-The tight streak adds a steep segment to $p(x)$ on $[0.45, 0.55]$.
+The tight streak adds a steep segment to $p(x)$ on $[0.45, 0.55]$, shaded in Figure~\ref{fig:profile}.
+The exact discrete pressure lies on the AMGCL curve.
+The saturation plot is the same pair of curves the program writes to \texttt{output/profile.svg}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  solveraxis,
+  height=5.4cm,
+  xlabel={$x$},
+  ylabel={Saturation $S$},
+  xmin=0, xmax=1,
+  ymin=0.15, ymax=0.86,
+  legend pos=north east,
+]
+\addplot[upwind] table[x=x, y=S, col sep=comma] {profile.csv};
+\addlegendentry{implicit upwind}
+\addplot[welge] table[x=x, y=S_exact, col sep=comma] {profile.csv};
+\addlegendentry{Welge}
+\end{axis}
+\end{tikzpicture}\\[1.2ex]
+\begin{tikzpicture}
+\begin{axis}[
+  solveraxis,
+  height=5.4cm,
+  xlabel={$x$},
+  ylabel={Pressure $p$},
+  xmin=0, xmax=1,
+  ymin=0, ymax=4.4,
+  legend pos=north east,
+]
+\fill[black!8] (axis cs:0.45,0) rectangle (axis cs:0.55,4.4);
+\addplot[upwind] table[x=x, y=p, col sep=comma] {profile.csv};
+\addlegendentry{AMGCL}
+\addplot[welge] table[x=x, y=p_exact, col sep=comma] {profile.csv};
+\addlegendentry{exact discrete}
+\end{axis}
+\end{tikzpicture}
+\caption{Default $800$-cell run at $t = 0.242$ pore volumes, from \texttt{profile.csv}.
+Top: implicit upwind saturation and the Welge profile. The shock is spread over a few cells.
+Bottom: pressure. The shaded band is the streak $k = 0.1$.}
+\label{fig:profile}
+\end{figure}
 
 \section{Build and output}
 
