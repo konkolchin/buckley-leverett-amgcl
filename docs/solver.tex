@@ -371,13 +371,17 @@ Bottom: pressure. The shaded band is the streak $k = 0.1$.}
 
 \section{Build and output}
 
-AMGCL~1.4.3 is the tree in \texttt{third\_party/amgcl}.
-If it is missing,
+AMGCL~1.4.3 is the Git submodule \texttt{third\_party/amgcl}. The repository records that release commit; \texttt{.gitmodules} only names the URL.
+Clone the project and that submodule together:
 \begin{lstlisting}
-git clone --depth 1 --branch 1.4.3 ^
-  https://github.com/ddemidov/amgcl.git third_party/amgcl
+git clone --recurse-submodules ^
+  https://github.com/konkolchin/buckley-leverett-amgcl.git
 \end{lstlisting}
-From a Visual Studio~2022 x64 developer prompt,
+If the project is already present and \texttt{third\_party/amgcl} is empty, fetch the recorded commit with
+\begin{lstlisting}
+git submodule update --init
+\end{lstlisting}
+From a Visual Studio~2022 x64 developer prompt, in the project directory,
 \begin{lstlisting}
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
